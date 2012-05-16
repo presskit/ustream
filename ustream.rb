@@ -4,8 +4,40 @@ require 'cgi'
 require "rexml/document"
 
 $amf_url = "http://cdngw.ustream.tv/Viewer/getStream/1/%s.amf"
-
 $api_uri = "http://api.ustream.tv/xml/channel/%s/getinfo?key=$API_KEY$"
+
+class CommandWrapper
+	# dur秒後に強制終了
+	def initialize cmd,dur=0
+		@cmd = cmd
+		@dur = dur 
+	end
+
+	def which
+		IO.popen("which #{@cmd}") {|pipe|
+			pipe.each{|line| return line.gsub("\n","")}
+		}
+		return ""
+	end
+
+	def find
+		_cmd = which
+		return _cmd unless _cmd.empty?
+
+		["/bin","/sbin","/usr/bin","/usr/local/bin","/usr/sbin","/usr/local/sbin"].each { |p|
+			return "%s/%s"%[p,@cmd] if File.exists?("%s/%s"%[p,@cmd]) 
+		}
+	end
+
+	def exec params
+          io = open("|%s %s"%[find(),params])
+          return io
+	end
+
+	def do params
+		exec params.join(" ")
+	end
+end
 
 class UstreamLive
 	
@@ -78,8 +110,9 @@ def download_stream video_url,streamname,title
   date = Time.now
   filename = date.strftime("#{title} %Y年%m月%d日 %H時%M分 #{date.to_i.to_s}.flv")
   rtmp = 'rtmpdump -vr %s  -f "LNX 10,0,45,2" -y %s --app %s --swfUrl http://www.ustream.tv/flash/viewer.swf -o "%s/%s"'%[video_url,streamname,app,@save_dir,filename]
+  io = CommandWrapper.new("rtmpdump").exec('-vr %s  -f "LNX 10,0,45,2" -y %s --app %s --swfUrl http://www.ustream.tv/flash/viewer.swf -o "%s/%s"')
   puts "|%s"%rtmp
-	@io = open("|%s"%rtmp)
+#	@io = open("|%s"%rtmp)
 	@th = Process.detach @io.pid
 end
 
@@ -191,19 +224,19 @@ def main
   th=Thread.new do
     loop do
       read_url_list if updated?
-	      @ustream_lives.each{|url|
-				if !@online_url[url]
-		        	thread_que << Thread.new do
-		        		@online_url[url]=true
-		        		UstreamLive.new(url,@save_dir).main
-		        		@online_url[url]=false
-		        	end
-		        end
-	      }
+      @ustream_lives.each{|url|
+        if !@online_url[url]
+          thread_que << Thread.new do
+            @online_url[url]=true
+            UstreamLive.new(url,@save_dir).main
+            @online_url[url]=false
+          end
+        end
+      }
       sleep 1
     end
   end
-
+  
   th.join
   
   loop do
