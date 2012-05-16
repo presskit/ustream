@@ -109,11 +109,12 @@ def download_stream video_url,streamname,title
   app = $1
   date = Time.now
   filename = date.strftime("#{title} %Y年%m月%d日 %H時%M分 #{date.to_i.to_s}.flv")
-  rtmp = 'rtmpdump -vr %s  -f "LNX 10,0,45,2" -y %s --app %s --swfUrl http://www.ustream.tv/flash/viewer.swf -o "%s/%s"'%[video_url,streamname,app,@save_dir,filename]
-  io = CommandWrapper.new("rtmpdump").exec('-vr %s  -f "LNX 10,0,45,2" -y %s --app %s --swfUrl http://www.ustream.tv/flash/viewer.swf -o "%s/%s"')
+  rtmp = '-vr %s  -f "LNX 10,0,45,2" -y %s --app %s --swfUrl http://www.ustream.tv/flash/viewer.swf -o "%s/%s"'%[video_url,streamname,app,@save_dir,filename]
   puts "|%s"%rtmp
-#	@io = open("|%s"%rtmp)
-	@th = Process.detach @io.pid
+  @io = CommandWrapper.new("rtmpdump").exec(rtmp)
+ 
+# @io = open("|%s"%rtmp)
+  @th = Process.detach @io.pid
 end
 
 def getinfo cid
