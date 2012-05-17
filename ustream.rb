@@ -52,7 +52,7 @@ def get_ustream_url
   return @ustream_url 
 end
 
-def remove_escape_seq str
+def remove_invalid_char str
   return "" if str==nil
   
   str = CGI.escape(str)
@@ -72,7 +72,7 @@ end
 
 def get_streamname text
   text =~ /streamName(.*)liveHttp/
-  return remove_escape_seq $1
+  return remove_invalid_char $1
 end
 
 def get_amf url
@@ -152,12 +152,12 @@ end
 
 def wait_for_finishing_recording
   begin
-    _timeout=20
-    _offair_sec=_timeout
-    while _offair_sec>0&&@th!=nil&&@th.alive?
-      _offair_sec=_timeout
-      while !isOnline? && _offair_sec>0&&@th!=nil&&@th.alive?
-        _offair_sec-=1
+    timeout=20
+    offair_sec=timeout.to_i
+    while offair_sec>0&&@th!=nil&&@th.alive?
+      offair_sec=timeout
+      while !isOnline? && offair_sec>0&&@th!=nil&&@th.alive?
+        offair_sec-=1
         sleep 1
       end
       #		puts "offair_sec:#{_offair_sec}"
