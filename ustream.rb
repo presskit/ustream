@@ -7,7 +7,6 @@ $amf_url = "http://cdngw.ustream.tv/Viewer/getStream/1/%s.amf"
 $api_uri = "http://api.ustream.tv/xml/channel/%s/getinfo?key=$API_KEY$"
 
 class Command
-  # dur秒後に強制終了
   def initialize cmd
     @cmd = cmd
     @full_cmd=""
