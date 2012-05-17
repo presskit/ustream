@@ -6,37 +6,39 @@ require "rexml/document"
 $amf_url = "http://cdngw.ustream.tv/Viewer/getStream/1/%s.amf"
 $api_uri = "http://api.ustream.tv/xml/channel/%s/getinfo?key=$API_KEY$"
 
-class CommandWrapper
-	# dur秒後に強制終了
-	def initialize cmd,dur=0
-		@cmd = cmd
-		@dur = dur 
-	end
-
-	def which
-		IO.popen("which #{@cmd}") {|pipe|
-			pipe.each{|line| return line.gsub("\n","")}
-		}
-		return ""
-	end
-
-	def find
-		_cmd = which
-		return _cmd unless _cmd.empty?
-
-		["/bin","/sbin","/usr/bin","/usr/local/bin","/usr/sbin","/usr/local/sbin"].each { |p|
-			return "%s/%s"%[p,@cmd] if File.exists?("%s/%s"%[p,@cmd]) 
-		}
-	end
-
-	def exec params
-          io = open("|%s %s"%[find(),params])
-          return io
-	end
-
-	def do params
-		exec params.join(" ")
-	end
+class Command
+  # dur秒後に強制終了
+  def initialize cmd
+    @cmd = cmd
+    @full_cmd=""
+  end
+  
+  def which
+    return @full_cmd unless @full_cmd.empty?
+    @full_cmd=""
+    IO.popen("which #{@cmd}") {|pipe|
+      pipe.each{|line| @full_cmd=line.gsub("\n","")}
+    }
+    return @full_cmd
+  end
+  
+  def find
+    return which unless which.empty?
+    
+    ["/bin","/sbin","/usr/bin","/usr/local/bin","/usr/sbin","/usr/local/sbin"].each do |p|
+      com_path = "%s/%s"%[p,@cmd]
+      return com_path if File.exists?(com_path) 
+    end
+  end
+  
+  def exec params
+    puts "|%s %s"%[find(),params]
+    return open("|%s %s"%[find(),params])
+  end
+  
+  def do params
+    return exec params.join(" ")
+  end
 end
 
 class UstreamLive
@@ -47,27 +49,26 @@ def initialize url,save_dir
   get_amf url
 end
 
-
 def get_ustream_url
-	return @ustream_url 
+  return @ustream_url 
 end
 
 def remove_escape_seq str
-	return "" if str==nil
-	
-	str = CGI.escape(str)
-	["%02","%0C","%00","%17","%0B","%15","%10"].each{|ch| str = str.gsub(ch,"") }
-	return CGI.unescape(str)
+  return "" if str==nil
+  
+  str = CGI.escape(str)
+  ["%02","%0C","%00","%17","%0B","%15","%10"].each{|ch| str = str.gsub(ch,"") }
+  return CGI.unescape(str)
 end
 
 def get_cid text
-	text =~ /cid=([0-9]*)/ 
-	return $1
+  text =~ /cid=([0-9]*)/ 
+  return $1
 end
 
 def get_title text
-	text =~ /<meta\s?property="og:title"\s?content="(.*?)"\s?\/>/
-	return $1
+  text =~ /<meta\s?property="og:title"\s?content="(.*?)"\s?\/>/
+  return $1
 end
 
 def get_streamname text
@@ -103,17 +104,21 @@ def get_stream_url amf_url
 end
 
 def download_stream video_url,streamname,title
-  return if video_url==nil || video_url.size==0 || streamname==nil || streamname.size==0 || title==nil || title.size==0
-
+  return if video_url==nil || video_url.empty? || streamname==nil || streamname.empty? || title==nil || title.empty?
+  
   video_url =~ /rtmp:\/\/[^\/]*\/(.*)\/*$/ 
   app = $1
   date = Time.now
   filename = date.strftime("#{title} %Y年%m月%d日 %H時%M分 #{date.to_i.to_s}.flv")
-  rtmp = '-vr %s  -f "LNX 10,0,45,2" -y %s --app %s --swfUrl http://www.ustream.tv/flash/viewer.swf -o "%s/%s"'%[video_url,streamname,app,@save_dir,filename]
-  puts "|%s"%rtmp
-  @io = CommandWrapper.new("rtmpdump").exec(rtmp)
- 
-# @io = open("|%s"%rtmp)
+
+  @io = Command.new("rtmpdump").do(["-vr %s"%video_url,
+                                   "-f \"LNX 10,0,45,2\"",
+                                   "-y %s"%streamname,
+                                   "--app %s"%app,
+                                   "--swfUrl http://www.ustream.tv/flash/viewer.swf",
+                                   "-o \"%s/%s\""%[@save_dir,filename]
+                                   ])
+  
   @th = Process.detach @io.pid
 end
 
@@ -134,44 +139,44 @@ def isOnline?
 end
 
 def start_recording
-	begin
-	main_th = Thread.new do
-		  get_amf @ustream_url
-		  get_stream_url @amf_url
-		  download_stream @video_url,@streamname,@title
-	end
-  	
-  	main_th.join
-
-   	rescue => exc; puts exc; end
+  begin
+    main_th = Thread.new do
+      get_amf @ustream_url
+      get_stream_url @amf_url
+      download_stream @video_url,@streamname,@title
+    end
+    
+    main_th.join
+    
+  rescue => exc; puts exc; end
 end
 
 def wait_for_finishing_recording
-	begin
-		_timeout=20
-		_offair_sec=_timeout
-		while _offair_sec>0&&@th!=nil&&@th.alive?
-			_offair_sec=_timeout
-			while !isOnline? && _offair_sec>0&&@th!=nil&&@th.alive?
-				_offair_sec-=1
-				sleep 1
-			end
-	#		puts "offair_sec:#{_offair_sec}"
-			sleep 1
-		end
-	    Process.kill('SIGHUP',@io.pid) if @th!=nil&&@th.alive?
-   	rescue => exc; puts exc; end
+  begin
+    _timeout=20
+    _offair_sec=_timeout
+    while _offair_sec>0&&@th!=nil&&@th.alive?
+      _offair_sec=_timeout
+      while !isOnline? && _offair_sec>0&&@th!=nil&&@th.alive?
+        _offair_sec-=1
+        sleep 1
+      end
+      #		puts "offair_sec:#{_offair_sec}"
+      sleep 1
+    end
+    Process.kill('SIGHUP',@io.pid) if @th!=nil&&@th.alive?
+  rescue => exc; puts exc; end
 end
 
 def main
-
-	begin
-	   while !isOnline? ; sleep 1; end
-		puts "[start recording] #{@title} "
-   		start_recording
-		wait_for_finishing_recording
-	    puts "[end recording] #{@title}"
-   	rescue => exc; puts exc; end
+  
+  begin
+    while !isOnline? ; sleep 1; end
+    puts "[start recording] #{@title} "
+    start_recording
+    wait_for_finishing_recording
+    puts "[end recording] #{@title}"
+  rescue => exc; puts exc; end
 end
 
 end
@@ -179,11 +184,11 @@ end
 class Scheduler
   def initialize file,save_dir, api_key_file
     @list_file = file
-	read_api_key api_key_file
-	@save_dir = save_dir
-	Dir::mkdir(save_dir) unless File.exists?(save_dir)
+    read_api_key api_key_file
+    @save_dir = save_dir
+    Dir::mkdir(save_dir) unless File.exists?(save_dir)
   end
-
+  
 def read_api_key api_key_file
     f = open(api_key_file)
     api_key = f.gets
@@ -205,16 +210,12 @@ end
 def read_url_list
   @ustream_lives = []
   f=open(@list_file,"r")
-  que=[]
-  f.each{|line|
-  puts line
-    que << Thread.new{
-      @ustream_lives << line if line =~ /^http:\/\/.*/
-      @online_url[line] = false
-    }
-  }
+  f.each do |line|
+    puts line
+    @ustream_lives << line if line =~ /^http:\/\/.*/
+    @online_url[line] = false
+  end
   f.close
-  que.each{|th|th.join}
 end
 
 def main
@@ -225,7 +226,7 @@ def main
   th=Thread.new do
     loop do
       read_url_list if updated?
-      @ustream_lives.each{|url|
+      @ustream_lives.each do |url|
         if !@online_url[url]
           thread_que << Thread.new do
             @online_url[url]=true
@@ -233,7 +234,7 @@ def main
             @online_url[url]=false
           end
         end
-      }
+      end
       sleep 1
     end
   end
