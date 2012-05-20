@@ -3,8 +3,10 @@ require 'open-uri'
 require 'cgi'
 require "rexml/document"
 
+
 $amf_url = "http://cdngw.ustream.tv/Viewer/getStream/1/%s.amf"
 $api_uri = "http://api.ustream.tv/xml/channel/%s/getinfo?key=$API_KEY$"
+$KCODE = "utf-8"
 
 class Command
   def initialize cmd
@@ -34,6 +36,7 @@ class Command
   end
   
   def exec params
+    puts "|%s %s"%[find(),params]
     return open("|%s %s"%[find(),params])
   end
 
@@ -56,10 +59,10 @@ end
 
 def remove_invalid_char str
   return "" if str.nil?
-  
+#  str.gsub!(/[^0-9a-zA-Z-_\/]/,"")
   str = CGI.escape(str)
-  str = str.gsub(/%02|%0C|%00|%17|%0B|%15|%10/){""}
-#  ["%02","%0C","%00","%17","%0B","%15","%10"].each{|ch| str = str.gsub(ch,"") }
+  #str = str.gsub(/%02|%0C|%00|%17|%0B|%15|%10/){""}
+  str.gsub!(/%02|%0C|%00|%17|%0B|%15|%10|%18|%11/,"")
   return CGI.unescape(str)
 end
 
@@ -69,7 +72,8 @@ def get_cid text
 end
  
 def get_title text
-  text =~ /<meta\s?property="og:title"\s?content="(.*?)"\s?\/>/
+
+  text =~ /<meta\s?property="og:title"\s*content="(.*?)"\s*\/>/
   return $1
 end
 
@@ -79,8 +83,10 @@ def get_streamname text
 end
 
 def get_amf url
-  url =~ /http:\/\/www.ustream.tv\/channel\/(.*)/
-  uri = URI.parse "http://www.ustream.tv/channel/%s"%CGI::escape($1)
+  url =~ /http:\/\/www.ustream.tv\/([^\/]*)\/(.*)/
+  puts "1:"+$1.to_s
+  puts "2:"+$2.to_s
+  uri = "http://www.ustream.tv/%s/%s"%[$1,CGI.escape($2)]
   open(uri) do |file|
     line = file.read
     @cid = get_cid line
@@ -142,7 +148,9 @@ end
 
 def isOnline?
   getinfo @cid
-  return @xml.elements['xml/results/status'].text=='live'
+  flg =  @xml.elements['xml/results/status'].text=='live'
+  puts "#{flg.to_s} #{@title} (#{@cid})"
+  return flg
 end
 
 def start_recording
@@ -155,7 +163,7 @@ def start_recording
     
     main_th.join
     
-  rescue => exc; puts exc.backtrace; end
+  rescue => exc; puts ext; puts exc.backtrace; end
 end
 
 def wait_for_finishing_recording
