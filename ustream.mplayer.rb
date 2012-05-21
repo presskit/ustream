@@ -38,6 +38,7 @@ class Command
   	return "%s %s"%[find(),params.join(" ")]
   end
   def exec params
+    puts "|%s %s"%[find(),params]
     puts CGI.escape("|%s %s"%[find(),params])
 #    puts CGI.escape( "|%s %s"%[find(),params])
 #    return open("|%s %s"%[find(),params])
@@ -64,11 +65,12 @@ end
 
 def remove_invalid_char str
   return "" if str.nil?
-#  str.gsub!(/[^0-9a-zA-Z-_\/]/,"")
-  str = CGI.escape(str)
+  str.gsub!(/[^0-9a-zA-Z~!@#$\%^&*\(\)_\-=+{}:\;'"<>\/,.\?]/,"")
+  return str
+#  str = CGI.escape(str)
   #str = str.gsub(/%02|%0C|%00|%17|%0B|%15|%10/){""}
-  str.gsub!(/%02|%0C|%00|%17|%0B|%15|%10|%18|%11|%14/,"")
-  return CGI.unescape(str)
+#  str.gsub!(/%02|%0C|%00|%17|%0B|%15|%10|%18|%11|%14/,"")
+#  return CGI.unescape(str)
 end
 
 def get_cid text
