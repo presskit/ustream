@@ -38,7 +38,7 @@ class Command
   	return "%s %s"%[find(),params.join(" ")]
   end
   def exec params
-    puts "|%s %s"%[find(),params]
+    puts CGI.escape("|%s %s"%[find(),params])
 #    puts CGI.escape( "|%s %s"%[find(),params])
 #    return open("|%s %s"%[find(),params])
 	return Thread.new {system("%s %s"%[find(),params])}
@@ -51,9 +51,9 @@ end
 
 class UstreamLive
 	
-def initialize url,opt,save_dir,api_key
+def initialize url,save_dir,api_key
   @ustream_url = url
-  @opt = opt
+  @opt = ""
 	$api_key
   get_amf url
 end
@@ -67,7 +67,7 @@ def remove_invalid_char str
 #  str.gsub!(/[^0-9a-zA-Z-_\/]/,"")
   str = CGI.escape(str)
   #str = str.gsub(/%02|%0C|%00|%17|%0B|%15|%10/){""}
-  str.gsub!(/%02|%0C|%00|%17|%0B|%15|%10|%18/,"")
+  str.gsub!(/%02|%0C|%00|%17|%0B|%15|%10|%18|%11|%14/,"")
   return CGI.unescape(str)
 end
 
@@ -89,8 +89,10 @@ end
 
 def get_amf url
 begin
-  url =~ /http:\/\/www.ustream.tv\/channel\/(.*)/
-  uri = URI.parse "http://www.ustream.tv/channel/%s"%CGI::escape($1)
+  url =~ /http:\/\/www.ustream.tv\/([^\/]*)\/(.*)/
+  puts "1:"+$1.to_s
+  puts "2:"+$2.to_s
+  	  uri = "http://www.ustream.tv/%s/%s"%[$1,CGI.escape($2)]
   open(uri) do |file|
     line = file.read
     @cid = get_cid line
@@ -98,7 +100,7 @@ begin
     break unless @cid.nil? || @title.nil?
   end
   @amf_url = $amf_url%@cid
-  rescue => exc; puts ext; puts exc.backtrace; end
+  rescue => exc; puts exc.backtrace; end
 end
 
 def get_stream_url2 text
@@ -129,7 +131,7 @@ def download_stream video_url,streamname,title
   date = Time.now
   filename = date.strftime("#{title} %Y年%m月%d日 %H時%M分 #{date.to_i.to_s}.flv")
   
-  @io = Command.new("rtmpdump").do(["-q","-vr %s"%video_url,
+  @th = Command.new("rtmpdump").do(["-q","-vr %s"%video_url,
                                     "-f \"LNX 10,0,45,2\"",
                                     "-y %s"%streamname,
                                     "--app %s"%app,
@@ -147,7 +149,7 @@ def download_stream video_url,streamname,title
                                     	"-" ])
                                    ])
   
-  @th = Process.detach @io.pid
+#  @th = Process.detach @io.pid
 	rescue => exc
 	puts exc.backtrace
 	 end
@@ -200,7 +202,7 @@ def wait_for_finishing_recording
       #		puts "offair_sec:#{_offair_sec}"
       sleep 1
     end
-    Process.kill('SIGHUP',@io.pid) if !@th.nil? && @th.alive?
+#    Process.kill('SIGHUP',@io.pid) if !@th.nil? && @th.alive?
   rescue => exc; puts exc.backtrace; end
 end
 
@@ -221,4 +223,4 @@ end
 end
 
 #Scheduler.new("ustream.list.txt","video","api_key").main
-UstreamLive.new(ARGV[0],ARGV[1],"video","API_KEY").main
+UstreamLive.new(ARGV[0],"video","API_KEY").main
