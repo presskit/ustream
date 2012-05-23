@@ -91,7 +91,7 @@ end
 
 def get_amf url
 begin
-  url =~ /http:\/\/www.ustream.tv\/([^\/]*)\/(.*)/
+  url =~ /http:\/\/www.ustream.tv\/([^\/]*)\/*(.*)/
   puts "1:"+$1.to_s
   puts "2:"+$2.to_s
   	  uri = "http://www.ustream.tv/%s/%s"%[$1,CGI.escape($2)]
@@ -144,8 +144,8 @@ def download_stream video_url,streamname,title
                                     "| %s"%Command.new("mplayer").get_full_cmd([
                                     	"-cache 256",
                                     	"-cache-seek-min 80",
-                                                                                "-v",
-                                                                                "-mc 10",
+                                                                                "-correct-pts",
+                                                                                # "-mc 10",
                                     	"-dr",
                                     	"-double",
                                     	"-framedrop",
