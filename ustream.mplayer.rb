@@ -144,7 +144,7 @@ def download_stream video_url,streamname,title
                                     "| %s"%Command.new("mplayer").get_full_cmd([
                                     	"-cache 256",
                                     	"-cache-seek-min 80",
-                                                                               # "-v",
+                                                                                "-correct-pts",
                                                                                 # "-mc 10",
                                     	"-dr",
                                     	"-double",
