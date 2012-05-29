@@ -77,10 +77,6 @@ def wait_for_finishing_recording
   rescue => exc; puts exc.backtrace; end
 end
 
-def isAlive?
-    true
-end
-
 def main
   
   begin
