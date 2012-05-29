@@ -77,6 +77,10 @@ def wait_for_finishing_recording
   rescue => exc; puts exc.backtrace; end
 end
 
+def isAlive?
+    true
+end
+
 def main
   
   begin
@@ -161,3 +165,4 @@ end
 end
 end
 Ustream::Scheduler.new("ustream.list.txt","video","api_key").main
+#Ustream::Scheduler.new("http://dl.dropbox.com/u/489176/ustream.list.txt","video","api_key").main
