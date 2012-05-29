@@ -1,4 +1,4 @@
-
+require 'timeout'
 
 module Ustream
 class Common
@@ -33,14 +33,20 @@ begin
   puts "1:"+$1.to_s
   puts "2:"+$2.to_s
   uri = "http://www.ustream.tv/%s/%s"%[$1,CGI.escape($2)]
-  open(uri) do |file|
-    line = file.read
-    @cid = get_cid line
-    @title = get_title line
-    break unless @cid.nil? || @title.nil?
+  timeout(10) do
+    open(uri) do |file|
+      line = file.read
+      @cid = get_cid line
+      @title = get_title line
+      break unless @cid.nil? || @title.nil?
+    end
   end
   @amf_url = $amf_url%@cid
-  rescue => exc; puts exc.backtrace; end
+  rescue Timeout::Error
+    puts "timeout: %s"%url
+  rescue => exc
+    puts exc.backtrace
+  end
 end
 
 def get_stream_url2(text)
@@ -51,20 +57,36 @@ end
 def get_stream_url(amf_url)
 begin
   uri = URI.parse(amf_url)
-  open(uri) do |file|
-    line = file.read
-    @video_url  = get_stream_url2 line
-    @streamname = get_streamname  line
+  timeout(10) do
+    uri.open do |file|
+      line = file.read
+      @video_url  = get_stream_url2 line
+      @streamname = get_streamname  line
+    end
   end
-rescue => exc; puts ext; puts exc.backtrace; end
+  rescue Timeout::Error
+    puts "timeout: %s(%s)"%[@title,@cid]
+  rescue => exc
+    puts ext
+    puts exc.backtrace
+  end
 end
 
 
 def getinfo(cid)
-  uri = URI.parse($api_uri%cid)
-  doc=''
-  open(uri) {|file| doc.concat(file.read) }
-  @xml = REXML::Document.new(doc)
+    begin
+      uri = URI.parse($api_uri%cid)
+      @xml=nil
+      doc=''
+      timeout(10) do
+       	 uri.open {|file| doc.concat(file.read) }
+       	 @xml = REXML::Document.new(doc)
+      end
+    rescue Timeout::Error
+        puts "timeout : %s(%s)"%[@title,@cid]
+    rescue
+	raise
+    end
 end
 
 def getTitle
