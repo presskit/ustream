@@ -1,4 +1,23 @@
 {
-	"appkey" : "<App key>",
-	"appsecret" : "<App secret>"
+	"consumer_key" : "<app key>",
+	"consumer_secret" : "<app secret>",
+	"method" : "PLAINTEXT",
+	"request_token": {
+		"http" : "https",
+		"method" : "post",
+		"host" : "api.dropbox.com",
+		"path" : "/1/oauth/request_token"
+	},
+	"authorize" : {
+		"http" : "https",
+		"method" : "get",
+		"host" : "www.dropbox.com",
+		"path" : "/1/oauth/authorize"
+	},
+	"access_token" : {
+		"http" : "https",
+		"method" : "post",
+		"host" : "api.dropbox.com",
+		"path" : "/1/oauth/access_token"
+	}
 }
