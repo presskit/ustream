@@ -50,6 +50,7 @@ def play(video_url,streamname,title)
                                                "-dr",
                                                "-double",
                                                "-framedrop",
+                                               "-really-quiet",
                                                "-" ])
     system("%s | %s"%[rtmpdump,mplayer])
   rescue => exc
