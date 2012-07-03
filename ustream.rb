@@ -12,7 +12,7 @@ def remove_invalid_char str
 end
 
 def get_cid text
-  text =~ /cid=([0-9]*)/ 
+  text =~ /;cid=([0-9]*)/ 
   return $1
 end
  
@@ -54,6 +54,15 @@ def get_stream_url2(text)
   return remove_invalid_char '%s%s'%[$1,$2]
 end
 
+def get_hashtag(text)
+  text = remove_invalid_char text
+  if text =~ /[(]([^\s|^)]*)liveathttp:[^)]*/
+    puts "hashtag: #{$1}"
+    return $1
+  end
+  return nil
+end
+
 def get_stream_url(amf_url)
 begin
   uri = URI.parse(amf_url)
@@ -62,12 +71,13 @@ begin
       line = file.read
       @video_url  = get_stream_url2 line
       @streamname = get_streamname  line
+      @hashtag    = get_hashtag line
     end
   end
   rescue Timeout::Error
     puts "timeout: %s(%s)"%[@title,@cid]
   rescue => exc
-    puts ext
+    puts exc
     puts exc.backtrace
   end
 end
