@@ -64,6 +64,7 @@ end
 
 def start_playing
   begin
+  	th=""
     main_th = Thread.new do
       get_amf @ustream_url
       get_stream_url @amf_url
@@ -74,10 +75,9 @@ def start_playing
       puts "viewers   : %s"%@viewers
 
       th = play @video_url,@streamname,@title
-      serf.join
     end
-    
-    return main_th
+    main_th.join 
+    return th
 
   rescue => exc
     puts exc
