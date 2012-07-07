@@ -94,9 +94,14 @@ def main
       th = start_playing
       cnt=0
       while cnt<5
-        cnt=cnt+1 unless th.alive?
+        puts "thread %s %s"%[th.alive?.to_s,cnt.to_s]
+        if th.alive?
+          cnt=0
+        else
+          cnt=cnt+1
+        end
         get_stream_url get_amf(@ustream_url)
-        puts "%s views: %s"%[Time.now.strftime("%H:%M"),@viewers]
+        puts "%s viewers: %s"%[Time.now.strftime("%H:%M:%S"),@viewers]
         sleep 30
       end
       puts "[end playing] #{@title}"
