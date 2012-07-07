@@ -52,59 +52,56 @@ def play(video_url,streamname,title)
                                                "-framedrop",
                                                "-really-quiet",
                                                "-" ])
-    system("%s | %s"%[rtmpdump,mplayer])
+#    system("%s | %s"%[rtmpdump,mplayer])
+    io = open("| %s | %s"%[rtmpdump,mplayer])
+    return Process.detach io.pid
+
   rescue => exc
     puts exc
     puts exc.backtrace
   end
 end
-
 
 def start_playing
   begin
     main_th = Thread.new do
       get_amf @ustream_url
       get_stream_url @amf_url
-      play @video_url,@streamname,@title
+
+      puts "video_url : %s"%@video_url
+      puts "streamname: %s"%@streamname
+      puts "hashtag   : %s"%@hashtag
+      puts "viewers   : %s"%@viewers
+
+      th = play @video_url,@streamname,@title
+      serf.join
     end
     
-    main_th.join
-    
+    return main_th
+
   rescue => exc
     puts exc
     puts exc.backtrace
   end
 end
 
-def wait_for_finishing_streaming
-  begin
-    timeout=20
-    offair_sec=timeout.to_i
-    while offair_sec>0 && !@th.nil? && @th.alive?
-      offair_sec=timeout.to_i
-      while !isOnline? && offair_sec>0 && !@th.nil? && @th.alive?
-        offair_sec-=1
-        sleep 1
-      end
-      #		puts "offair_sec:#{_offair_sec}"
-      sleep 1
-    end
-#    Process.kill('SIGHUP',@io.pid) if !@th.nil? && @th.alive?
-  rescue => exc; puts exc.backtrace; end
-end
-
 def main
   
-  begin
-    while !isOnline? ; sleep 1; end
-    puts "[start recording] #{@title} "
-    start_playing
-    #wait_for_finishing_streaming
-    loop do
-      sleep 10
-    end
-    puts "[end recording] #{@title}"
-  rescue => exc; puts exc; puts exc.backtrace; end
+  while true
+    begin
+      while !isOnline? ; sleep 1; end
+      puts "[start playing] #{@title} "
+      th = start_playing
+      cnt=0
+      while cnt<5
+        cnt=cnt+1 unless th.alive?
+        get_stream_url get_amf(@ustream_url)
+        puts "%s views: %s"%[Time.now.strftime("%H:%M"),@viewers]
+        sleep 30
+      end
+      puts "[end playing] #{@title}"
+    rescue => exc; puts exc; puts exc.backtrace; end
+  end
 end
 
 end

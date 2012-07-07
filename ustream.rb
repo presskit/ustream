@@ -26,12 +26,15 @@ def get_streamname(text)
   text =~ /streamName(.*)liveHttp/
   return remove_invalid_char $1
 end
-
+def get_viewers(text)
+  text =~ /viewerNumber(.*)useUmsViewerCount/
+  return remove_invalid_char $1
+end
 def get_amf(url)
 begin
   url =~ /http:\/\/www.ustream.tv\/([^\/]*)\/?(.*)/
-  puts "1:"+$1.to_s
-  puts "2:"+$2.to_s
+#  puts "1:"+$1.to_s
+#  puts "2:"+$2.to_s
   uri = "http://www.ustream.tv/%s/%s"%[$1,CGI.escape($2)]
   timeout(10) do
     open(uri) do |file|
@@ -57,7 +60,7 @@ end
 def get_hashtag(text)
   text = remove_invalid_char text
   if text =~ /[(]([^\s|^)]*)liveathttp:[^)]*/
-    puts "hashtag: #{$1}"
+#    puts "hashtag: #{$1}"
     return $1
   end
   return nil
@@ -72,6 +75,7 @@ begin
       @video_url  = get_stream_url2 line
       @streamname = get_streamname  line
       @hashtag    = get_hashtag line
+      @viewers    = get_viewers line
     end
   end
   rescue Timeout::Error
@@ -106,7 +110,7 @@ end
 def isOnline?
   getinfo @cid
   flg =  @xml.elements['xml/results/status'].text=='live'
-  puts "#{flg.to_s} #{@title} (#{@cid})"
+  puts "#{flg.to_s} #{@title} (#{@cid}) "
   return flg
 end
 end
