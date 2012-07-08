@@ -32,7 +32,7 @@ def get_viewers(text)
 end
 def get_amf(url)
 begin
-  url =~ /http:\/\/www.ustream.tv\/([^\/]*)\/?(.*)/
+  url =~ /http:\/\/www.ustream.tv\/([^\/]*)\/?(.*)#?/
 #  puts "1:"+$1.to_s
 #  puts "2:"+$2.to_s
   uri = "http://www.ustream.tv/%s/%s"%[$1,CGI.escape($2)]

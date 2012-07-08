@@ -49,13 +49,14 @@ def play(video_url,streamname,title)
                                                "-mc 10",
                                                "-dr",
                                                "-double",
-                                               "-framedrop",
+                                               "-hardframedrop",
                                                "-really-quiet",
                                                "-" ])
 #    system("%s | %s"%[rtmpdump,mplayer])
     io = open("| %s | %s"%[rtmpdump,mplayer])
-    return Process.detach io.pid
-
+#    return Process.detach io.pid
+	return io
+	
   rescue => exc
     puts exc
     puts exc.backtrace
@@ -75,8 +76,12 @@ def start_playing
       puts "viewers   : %s"%@viewers
 
       th = play @video_url,@streamname,@title
+      self.join
     end
-    main_th.join 
+
+    while !main_th.alive? 
+    	sleep 0.2
+	end    
     return th
 
   rescue => exc
@@ -94,8 +99,7 @@ def main
       th = start_playing
       cnt=0
       while cnt<5
-        puts "thread %s %s"%[th.alive?.to_s,cnt.to_s]
-        if th.alive?
+        if th!=nil #th.alive?
           cnt=0
         else
           cnt=cnt+1
