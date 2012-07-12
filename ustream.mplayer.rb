@@ -14,7 +14,7 @@ CurrentDir = Dir.pwd
 module Ustream 
 class Player < Common
 	
-def initialize(url,save_dir,api_key=nil)
+def initialize(url,api_key=nil)
   @ustream_url = url
   @opt = ""
   $api_key=api_key
@@ -135,7 +135,8 @@ def main
   end
 
   load_playlist
-  if @ustream_url =~ /([0-9]*)/
+
+  if @ustream_url =~ /^([0-9]*)$/
     @ustream_url = @play_list[$1.to_i-1]
   end
 
@@ -164,4 +165,4 @@ end
 end
 end
 #Scheduler.new("ustream.list.txt","video","api_key").main
-Ustream::Player.new(ARGV[0],"video").main
+Ustream::Player.new(ARGV[0]).main
