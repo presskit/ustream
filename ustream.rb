@@ -33,9 +33,11 @@ end
 def get_amf(url)
 begin
   url =~ /http:\/\/www.ustream.tv\/([^\/]*)\/?(.*)#?/
+  @channel = $1
+  @ust_name = CGI.escape($2)
 #  puts "1:"+$1.to_s
 #  puts "2:"+$2.to_s
-  uri = "http://www.ustream.tv/%s/%s"%[$1,CGI.escape($2)]
+  uri = "http://www.ustream.tv/%s/%s"%[@channel,@ust_name]
   timeout(10) do
     open(uri) do |file|
       line = file.read
