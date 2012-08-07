@@ -4,6 +4,7 @@ require 'cgi'
 require "rexml/document"
 require "lib/command"
 require "ustream"
+require "lib/mail"
 
 $amf_url = "http://cdngw.ustream.tv/Viewer/getStream/1/%s.amf"
 $api_uri = "http://api.ustream.tv/xml/channel/%s/getinfo?key=$API_KEY$"
@@ -16,6 +17,8 @@ def initialize url,save_dir
   @ustream_url = url
   @save_dir=save_dir
   get_amf url
+  @stdout=""
+  @stderr=""
 end
 
 def download video_url,streamname,title
@@ -39,8 +42,9 @@ def download video_url,streamname,title
                                       "--swfUrl http://www.ustream.tv/flash/viewer.swf",
                                       "-o \"%s/%s\""%[@save_dir,filename]
                                      ])
-    
-    @th = Process.detach @io.pid
+    @stdout << @io.get_stdout
+    @stderr << @io.get_stderr
+#    @th = Process.detach @io.pid
   rescue => exc
     puts exc
     puts exc.backtrace
@@ -50,8 +54,6 @@ end
 def start_recording
   begin
     main_th = Thread.new do
-      get_amf @ustream_url
-      get_stream_url @amf_url
       download @video_url,@streamname,@title
     end
     
@@ -62,7 +64,7 @@ end
 
 def wait_for_finishing_recording
   begin
-    timeout=20
+    timeout=60
     offair_sec=timeout.to_i
     while offair_sec>0 && !@th.nil? && @th.alive?
       offair_sec=timeout.to_i
@@ -73,7 +75,8 @@ def wait_for_finishing_recording
       #		puts "offair_sec:#{_offair_sec}"
       sleep 1
     end
-    Process.kill('SIGHUP',@io.pid) if !@th.nil? && @th.alive?
+#    Process.kill('SIGHUP',@io.pid) if !@th.nil? && @th.alive?
+    @io.get_thread.kill unless @io.get_thread == nil
   rescue => exc; puts exc.backtrace; end
 end
 
@@ -81,10 +84,32 @@ def main
   
   begin
     while !isOnline? ; sleep 1; end
+    get_amf @ustream_url
+    get_stream_url @amf_url
+    body = ""
+    body << "video_url : " + @video_url.to_s  + "\n"
+    body << "title     : " + @title.to_s      + "\n"
+    body << "streamname: " + @streamname.to_s + "\n"
+    body << "hashtag   : " + @hashtag.to_s    + "\n"
+    body << "viewers   : " + @viewers.to_s    + "\n"
+    Mail::Gmail.new.send("[ustream][start] #{@title.to_s}",body)
     puts "[start recording] #{@title} "
     start_recording
     wait_for_finishing_recording
+    @stdout.gsub!(/[0-9|.]* kB \/ [0-9|.]* sec.*\n*$/,"") 
+    @stderr.gsub!(/[0-9|.]* kB \/ [0-9|.]* sec.*\n*$/,"") 
     puts "[end recording] #{@title}"
+    body = ""
+    body << "video_url : " + @video_url.to_s  + "\n"
+    body << "title     : " + @title.to_s      + "\n"
+    body << "streamname: " + @streamname.to_s + "\n"
+    body << "hashtag   : " + @hashtag.to_s    + "\n"
+    body << "viewers   : " + @viewers.to_s    + "\n"
+    body << "stdout:\n"
+    body << @stdout + "\n"
+    body << "stderr:\n"
+    body << @stderr + "\n"
+    Mail::Gmail.new.send("[ustream][end] #{@title.to_s}",body)
   rescue => exc; puts exc.backtrace; end
 end
 
