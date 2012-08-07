@@ -1,9 +1,12 @@
 # -*- coding: utf-8 -*-
+require "open3"
 
 class Command
   def initialize cmd
     @cmd = cmd
     @full_cmd=""
+    @stdout=""
+    @stderr=""
   end
   
   def which
@@ -32,10 +35,34 @@ class Command
   def exec params
     puts "|%s %s"%[find(),params]
     puts CGI.escape("|%s %s"%[find(),params])
-    return open("| %s %s"%[find(),params])
+    @th = Thread.new do
+      stdin,stdout,stderr = Open3.popen3 "%s %s"%[find(),params]
+      @stdout << stdout.read.to_s
+      @stderr << stderr.read.to_s
+    end
+    @th.join
+#    return open("| %s %s"%[find(),params])
+    return self
   end
 
   def do params
     return exec params.join(" ")
   end
+  def get_stdout
+    return @stdout
+  end
+  def get_stderr
+    return @stderr
+  end
+  def get_thread
+    return @th
+  end
 end
+
+
+
+
+
+
+
+
